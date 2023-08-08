@@ -29,20 +29,21 @@ def parent_state(state):
     if not isinstance(state, torch.Tensor): raise TypeError("GFlowNet state is not of type tensor")
     # numpy and pytorch have similar operations
     # we figure out where the first 2 starts
-    parent_state, parent_actions = None
+    # parent action -> How do we get from that parent state to child state
+    parent_state, parent_action = None
 
     first_empty_index = torch.argmax(state == 2)
 
     # no parent states or actions exist yet
     # can we reduce the number of return statements?
-    if first_empty_index == 0: return parent_state, parent_actions
+    if first_empty_index == 0: return parent_state, parent_action
 
-    parent_actions = (0, 1)
+    parent_action = state[first_empty_index - 1].item()
     if first_empty_index == 1:
-        return parent_state, parent_actions
+        return parent_state, parent_action
     
     parent_state = state[0:first_empty_index - 2]
-    return parent_state, parent_actions
+    return parent_state, parent_action
     
     # find the first occurence of where the 2 occurs
     # subtract 1 in index -> child action at index + state in totality, 
