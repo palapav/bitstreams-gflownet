@@ -23,3 +23,36 @@ def bits_reward(bits_tensor):
     # hopefully we don't see any other bit strings in terminal composite objects
     return 0
 
+
+# plan out function -> robustness
+def parent_state(state):
+    if not isinstance(state, torch.Tensor): raise TypeError("GFlowNet state is not of type tensor")
+    # numpy and pytorch have similar operations
+    # we figure out where the first 2 starts
+    parent_state, parent_actions = None
+
+    first_empty_index = torch.argmax(state == 2)
+
+    # no parent states or actions exist yet
+    # can we reduce the number of return statements?
+    if first_empty_index == 0: return parent_state, parent_actions
+
+    parent_actions = (0, 1)
+    if first_empty_index == 1:
+        return parent_state, parent_actions
+    
+    parent_state = state[0:first_empty_index - 2]
+    return parent_state, parent_actions
+    
+    # find the first occurence of where the 2 occurs
+    # subtract 1 in index -> child action at index + state in totality, 
+    # subtract 1 in index -> parent state
+
+    # edge case when 2 is the first index
+
+def main(): pass
+
+# unit testing
+if __name__ == "__main__":
+    main()
+
