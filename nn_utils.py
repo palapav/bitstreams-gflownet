@@ -1,4 +1,7 @@
+from typing import Type
 import torch
+
+TARGET_BIT_STRING_LEN = 12
 
 def is_balanced(bits_tensor):
     num_one_bits = torch.sum(bits_tensor == 1)
@@ -25,7 +28,7 @@ def bits_reward(bits_tensor):
 
 
 # plan out function -> robustness
-def parent_state(state):
+def parent_state_action(state):
     if not isinstance(state, torch.Tensor): raise TypeError("GFlowNet state is not of type tensor")
     # numpy and pytorch have similar operations
     # we figure out where the first 2 starts
@@ -44,14 +47,30 @@ def parent_state(state):
     
     parent_state = state[0:first_empty_index - 2]
     return parent_state, parent_action
-    
-    # find the first occurence of where the 2 occurs
-    # subtract 1 in index -> child action at index + state in totality, 
-    # subtract 1 in index -> parent state
 
-    # edge case when 2 is the first index
+# prepares for neural network input
+def bits_to_tensor(bits_state):
+    if not isinstance(bits_state, list): raise TypeError("bits state is not of type list")
+    bits_list_length = len(bits_state)
+    if bits_list_length > TARGET_BIT_STRING_LEN: raise ValueError(f"bit string length is greater than {TARGET_BIT_STRING_LEN}")
 
-def main(): pass
+    # inefficient
+    empty_slots = [2 for i in range(0, TARGET_BIT_STRING_LEN - bits_list_length)]
+    input_tensor = torch.tensor(bits_state + empty_slots)
+    return input_tensor
+
+def main():
+    # test cases for is_balanced()
+
+    # test cases for is_palindrome()
+
+    # test cases for bits_reward()
+
+    # test cases for parent_state()
+
+    # test cases for bits_to_tensor()
+    bits_state = [0, 0, 1]
+    input_tensor1 = bits_to_tensor(bits_state)
 
 # unit testing
 if __name__ == "__main__":
