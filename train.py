@@ -24,7 +24,7 @@ def train():
 
     # for checking progress per episode
     # why isn't variable working in range function?
-    for episode in range(3000):
+    for episode in range(5000):
         # each episode state starts with an empty state
         state = []
         state = bits_to_tensor(state)
@@ -72,6 +72,7 @@ def train():
             if t == TARGET_BIT_STRING_LEN:
                 # edge flow prediction = reward, terminal state
                 reward = bits_reward(new_state)
+                print(f"my reward: {reward}")
                 edge_flow_prediction = reward
             else:
                 # reward = 0
@@ -128,6 +129,8 @@ def validate_train(sampled_bit_tensors, bits_reward):
         else:
             bit_strings_type["none"] = bit_strings_type.get("none") + 1
     
+    print(f"Number of balanced strings: {bit_strings_type.get('balanced')}")
+    print(f"Number of palindrome + balanced strings: {bit_strings_type.get('palindrome+balanced')}")
     print(f"balanced to palindrome ratio: {bit_strings_type.get('balanced') / bit_strings_type.get('palindrome+balanced')}")
 
 

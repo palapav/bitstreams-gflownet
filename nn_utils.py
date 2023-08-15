@@ -5,19 +5,21 @@ TARGET_BIT_STRING_LEN = 12
 def is_balanced(bits_tensor):
     num_one_bits = torch.sum(bits_tensor == 1)
     num_zero_bits = torch.sum(bits_tensor == 0)
-    return torch.equals(num_one_bits, num_zero_bits)
+    return torch.equal(num_one_bits, num_zero_bits)
 
 def is_palindrome(bits_tensor):
     # dim=0 along rows
     reversed_bits = torch.flip(bits_tensor, dims=[0])
-    return torch.equals(bits_tensor, reversed_bits)
+    return torch.equal(bits_tensor, reversed_bits)
 
 # input must be tensor
 def bits_reward(bits_tensor):
     if not isinstance(bits_tensor, torch.FloatTensor): raise TypeError("GFlowNet state is not of type tensor")
 
-    # ensures bit string has only zeroes and ones
-    if not torch.any((bits_tensor != 0) & (bits_tensor != 1)).item(): return 0     
+    # ensures bit string has only zeroes and ones -> otherwise raise value error
+    if torch.any(bits_tensor == 2.0).item():
+        print(f"uncompleted tensor:\n{bits_tensor}") 
+        raise ValueError("terminal state is not complete yet")     
     # bits_tensor that is a palindrome and balanced should appear 2
     # times more than a bits_tensor that is strictly palindrome and 4 times
     # more than palindrome that is strictly balanced
@@ -32,13 +34,6 @@ def bits_reward(bits_tensor):
 # plan out function -> robustness
 def parent_state_action(state):
     if not isinstance(state, torch.FloatTensor): raise TypeError("GFlowNet state is not of type tensor")
-    # numpy and pytorch have similar operations
-    # we figure out where the first 2 starts
-    # parent action -> How do we get from that parent state to child state
-    # parent_state, parent_action = [], None
-
-    # print(f"statekkk: {state}")
-
     # need to fix the double zero, find better function
     # first empty index is at least at 1 -> because we are always guarenteed
     # at a child state
@@ -75,6 +70,10 @@ def bits_to_tensor(bits_state):
 def main():
     # use a test framework
     # test cases for is_balanced()
+    terminal_state = torch.FloatTensor([0., 0., 0., 1., 1., 1., 1., 1., 1., 0., 0., 0.])
+    print(f"Balanced: {is_balanced(terminal_state)}")
+    print(f"Palindrome: {is_palindrome(terminal_state)}")
+    print(f"Balanced + Palindrome: {is_balanced(terminal_state) and is_palindrome(terminal_state)}")
 
     # test cases for is_palindrome()
 
@@ -83,8 +82,8 @@ def main():
     # test cases for parent_state()
 
     # test cases for bits_to_tensor()
-    bits_state = [0, 0, 1]
-    input_tensor1 = bits_to_tensor(bits_state)
+    # bits_state = [0, 0, 1]
+    # input_tensor1 = bits_to_tensor(bits_state)
 
 # unit testing
 if __name__ == "__main__":
