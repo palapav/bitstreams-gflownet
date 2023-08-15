@@ -9,3 +9,5 @@ output = layer_1(tensor)
 
 
 2. Check flow mismatch loss -> make sense of it more
+
+3. Investigate -> Evaluation results gathered during training

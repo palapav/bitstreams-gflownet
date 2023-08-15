@@ -37,7 +37,7 @@ def parent_state_action(state):
     # parent action -> How do we get from that parent state to child state
     # parent_state, parent_action = [], None
 
-    print(f"statekkk: {state}")
+    # print(f"statekkk: {state}")
 
     # need to fix the double zero, find better function
     # first empty index is at least at 1 -> because we are always guarenteed
@@ -65,11 +65,11 @@ def bits_to_tensor(bits_state):
 
     # need to figure out a way to stop -> torch.full
     empty_slots = [2 for i in range(0, TARGET_BIT_STRING_LEN - bits_list_length)]
-    print(f"bits before state: {bits_state}")
+    # print(f"bits before state: {bits_state}")
     bits_state.extend(empty_slots)
-    print(f"bitzz state: {bits_state}")
+    # print(f"bitzz state: {bits_state}")
     input_tensor = torch.FloatTensor(bits_state)
-    print(f"input tensor:{input_tensor}")
+    # print(f"input tensor:{input_tensor}")
     return input_tensor
 
 def main():
