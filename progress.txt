@@ -1,0 +1,11 @@
+1. See why nn.Linear() expects input of float32 but the error that occurs
+is RuntimeError: expected scalar type Long but found Float
+
+Reproduced error:
+
+tensor = torch.LongTensor([1, 2, 3, 4])
+layer_1 = torch.Linear(4, 5)
+output = layer_1(tensor)
+
+
+2. Check flow mismatch loss -> make sense of it more
