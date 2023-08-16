@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from nn_utils import TARGET_BIT_STRING_LEN
 
 # train using a flow-matching loss
 # let's hardcode for size 12 bit strings -> ideally we would want variable
@@ -8,7 +9,7 @@ class GFlowNet(nn.Module):
     def __init__(self, num_hid):
         # super should be first line
         super().__init__()
-        self.mlp = nn.Sequential(nn.Linear(12, num_hid), nn.LeakyReLU(),
+        self.mlp = nn.Sequential(nn.Linear(TARGET_BIT_STRING_LEN, num_hid), nn.LeakyReLU(),
                                  nn.Linear(num_hid, 2))
     
     # x represents the parent bit string

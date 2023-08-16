@@ -13,3 +13,17 @@ output = layer_1(tensor)
 3. Investigate -> Evaluation results gathered during training
 
 4. How to continue to generate data without training the GFlowNet
+
+
+
+# plot reward over training for sampled bit strings
+# reduce length of bit string
+# flows should be strictly decreasing
+# parametrized the log of the flow (get rid of exp)
+# save the model weights (trained GFlowNet)
+
+
+refactor validate_train in eval.py
+
+
+variable function in range

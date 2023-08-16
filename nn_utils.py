@@ -1,6 +1,6 @@
 import torch
 
-TARGET_BIT_STRING_LEN = 12
+TARGET_BIT_STRING_LEN = 6
 
 def is_balanced(bits_tensor):
     num_one_bits = torch.sum(bits_tensor == 1)
@@ -18,12 +18,13 @@ def bits_reward(bits_tensor):
 
     # ensures bit string has only zeroes and ones -> otherwise raise value error
     if torch.any(bits_tensor == 2.0).item():
-        print(f"uncompleted tensor:\n{bits_tensor}") 
+        # print(f"uncompleted tensor:\n{bits_tensor}") 
         raise ValueError("terminal state is not complete yet")     
     # bits_tensor that is a palindrome and balanced should appear 2
     # times more than a bits_tensor that is strictly palindrome and 4 times
     # more than palindrome that is strictly balanced
-    if is_palindrome(bits_tensor) and is_balanced(bits_tensor): return 4
+    # first reward function is not working
+    if is_palindrome(bits_tensor) and is_balanced(bits_tensor): return 100
     if is_palindrome(bits_tensor): return 2
     if is_balanced(bits_tensor): return 1
 
@@ -80,6 +81,12 @@ def main():
     # test cases for bits_reward()
 
     # test cases for parent_state()
+    # child_state = torch.FloatTensor([0., 0., 0., 1., 1., 1., 1., 1., 1., 0., 0., 0.])
+    child_state = torch.FloatTensor([1., 1., 1., 2., 2., 2., 2., 2., 2., 2., 2., 2.])
+    parent_state, parent_action = parent_state_action(child_state)
+    print(f"parent state: {parent_state}")
+    print(f"parent action: {parent_action}")
+
 
     # test cases for bits_to_tensor()
     # bits_state = [0, 0, 1]
