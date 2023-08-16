@@ -26,4 +26,9 @@ output = layer_1(tensor)
 refactor validate_train in eval.py
 
 
+When creating a bit string -> How would it ever know to enter the if
+statement that has a 4 reward -> it would need to first create a bit
+string that is both a palindrome and balanced
+
+
 variable function in range

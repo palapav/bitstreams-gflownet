@@ -1,6 +1,6 @@
 import torch
 
-TARGET_BIT_STRING_LEN = 6
+TARGET_BIT_STRING_LEN = 4
 
 def is_balanced(bits_tensor):
     num_one_bits = torch.sum(bits_tensor == 1)
@@ -16,42 +16,17 @@ def is_palindrome(bits_tensor):
 def bits_reward(bits_tensor):
     if not isinstance(bits_tensor, torch.FloatTensor): raise TypeError("GFlowNet state is not of type tensor")
 
-    # ensures bit string has only zeroes and ones -> otherwise raise value error
     if torch.any(bits_tensor == 2.0).item():
         # print(f"uncompleted tensor:\n{bits_tensor}") 
         raise ValueError("terminal state is not complete yet")     
-    # bits_tensor that is a palindrome and balanced should appear 2
-    # times more than a bits_tensor that is strictly palindrome and 4 times
-    # more than palindrome that is strictly balanced
-    # first reward function is not working
-    if is_palindrome(bits_tensor) and is_balanced(bits_tensor): return 100
+    
+    # conflicting dependencies in reward function
+    if is_palindrome(bits_tensor) and is_balanced(bits_tensor): return 0
     if is_palindrome(bits_tensor): return 2
     if is_balanced(bits_tensor): return 1
 
     # hopefully we don't see any other bit strings in terminal composite objects
     return 0
-
-
-# plan out function -> robustness
-def parent_state_action(state):
-    if not isinstance(state, torch.FloatTensor): raise TypeError("GFlowNet state is not of type tensor")
-    # need to fix the double zero, find better function
-    # first empty index is at least at 1 -> because we are always guarenteed
-    # at a child state
-    # last child state in DAG (initial implementation -> tree)
-    # parent action -> leads to child state
-    parent_action_index = 11
-    if torch.where(state == 2)[0].numel() > 0:
-        first_empty_index = torch.where(state == 2)[0][0].item()
-        parent_action_index = first_empty_index - 1
-
-    parent_action = state[parent_action_index].item()
-    # is the clone necessary?
-    parent_state = state.clone()
-    # harcode with misc number (not 0, 1)
-    parent_state[parent_action_index] = 2
-    
-    return parent_state, parent_action
 
 # prepares for neural network input
 def bits_to_tensor(bits_state):
@@ -72,6 +47,7 @@ def main():
     # use a test framework
     # test cases for is_balanced()
     terminal_state = torch.FloatTensor([0., 0., 0., 1., 1., 1., 1., 1., 1., 0., 0., 0.])
+    print(bits_reward(terminal_state))
     print(f"Balanced: {is_balanced(terminal_state)}")
     print(f"Palindrome: {is_palindrome(terminal_state)}")
     print(f"Balanced + Palindrome: {is_balanced(terminal_state) and is_palindrome(terminal_state)}")
@@ -83,9 +59,9 @@ def main():
     # test cases for parent_state()
     # child_state = torch.FloatTensor([0., 0., 0., 1., 1., 1., 1., 1., 1., 0., 0., 0.])
     child_state = torch.FloatTensor([1., 1., 1., 2., 2., 2., 2., 2., 2., 2., 2., 2.])
-    parent_state, parent_action = parent_state_action(child_state)
-    print(f"parent state: {parent_state}")
-    print(f"parent action: {parent_action}")
+    # parent_state, parent_action = parent_state_action(child_state)
+    # print(f"parent state: {parent_state}")
+    # print(f"parent action: {parent_action}")
 
 
     # test cases for bits_to_tensor()

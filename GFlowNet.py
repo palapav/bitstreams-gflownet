@@ -16,7 +16,8 @@ class GFlowNet(nn.Module):
     # will the ouput be probabilistic or definite?
     def forward(self, x):
         # we need to give 0 flow to actions we can't take -> not necessary b/c
-        # no need to multiply by (1 - x) -> no illegal actions 
+        # no need to multiply by (1 - x) -> no illegal actions
+        # instead of .exp -> try log
         F = self.mlp(x).exp()
         return F
 

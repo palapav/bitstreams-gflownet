@@ -1,5 +1,5 @@
 from GFlowNet import GFlowNet
-from nn_utils import bits_reward, bits_to_tensor, parent_state_action, TARGET_BIT_STRING_LEN
+from nn_utils import bits_reward, bits_to_tensor, TARGET_BIT_STRING_LEN
 import torch
 from torch.distributions.bernoulli import Bernoulli
 import tqdm
@@ -20,20 +20,25 @@ def train():
 
     num_episodes = 50,000
 
-    for episode in range(3000):
+    for episode in range(50000):
         # each episode state starts with an empty state
         state = []
-        state = bits_to_tensor(state)
+        # state = bits_to_tensor(state)
+        state = torch.FloatTensor([2.] * TARGET_BIT_STRING_LEN)
 
         # tensor[ , ] = F[s][a]
         edge_flow_prediction = F_sa(state)
+        # print(f"beginning: {edge_flow_prediction}")
 
-        # 12 flows from parent to children to create 12 bit string
+        # 6 flows from parent to children to create 6 bit string
         for t in range(TARGET_BIT_STRING_LEN):
             policy = edge_flow_prediction / edge_flow_prediction.sum()
 
+            # print(f"Policy in {t}: {policy[1]}")
+
             # the first element in policy vector for 0, second one for 1
             action = Bernoulli(probs=policy[1]).sample()
+            # print(f"action: {action}")
 
             # need to figure out better indexing method
             action_index = torch.where(state == 2)[0][0].item()
@@ -47,28 +52,26 @@ def train():
             parent_action = int(parent_action)
             parent_edge_flow_pred = F_sa(parent_state)[parent_action]
 
-            if t == TARGET_BIT_STRING_LEN:
-                # edge flow prediction = reward, terminal state
+            reward = 0
+            edge_flow_prediction = torch.zeros(2)
+            if t == TARGET_BIT_STRING_LEN - 1:
+                # print("I AM GETTING A REWARD:")
                 reward = bits_reward(new_state)
-                # print(f"my reward: {reward}")
-                edge_flow_prediction = reward
-            else:
-                # reward = 0
-                # 1 x 2 arr
-                edge_flow_prediction = F_sa(new_state)
+            else: edge_flow_prediction = F_sa(new_state)
 
-            flow_mismatch = (parent_edge_flow_pred - edge_flow_prediction.sum()) ** 2
+            flow_mismatch = (parent_edge_flow_pred - edge_flow_prediction.sum() - reward) ** 2
             minibatch_loss += flow_mismatch
 
-            # continue iterating to next flow states
             state = new_state
         
         # adding terminal bit string objects to sampled_bit_strings
         sampled_bit_strings.append(state)
+        if episode % 10000 == 0:
+            validate_train(sampled_bit_strings, bits_reward)
 
         if episode % update_freq == 0:
-            print(f"minibatch loss {episode}:\n{minibatch_loss}")
-            losses.append(minibatch_loss)
+            print(f"minibatch loss {episode}:\n{minibatch_loss.item()}")
+            losses.append(minibatch_loss.item())
             # minibatch loss needs to be in the form of a tensor
             minibatch_loss.backward()
             opt.step()
@@ -85,9 +88,9 @@ def validate_train(sampled_bit_tensors, bits_reward):
         # print(f"bits tensor in eval: {bits_tensor}")
         reward = bits_reward(bits_tensor)
         # print(f"reward from sampled bits: {reward}")
-        if reward == 4:
-            bit_strings_type["palindrome+balanced"] = bit_strings_type.get("palindrome+balanced") + 1
-        elif reward == 2:
+        # if reward == 4:
+        #     bit_strings_type["palindrome+balanced"] = bit_strings_type.get("palindrome+balanced") + 1
+        if reward == 2:
             bit_strings_type["palindrome"] = bit_strings_type.get("palindrome") + 1
         elif reward == 1:
             bit_strings_type["balanced"] = bit_strings_type.get("balanced") + 1
@@ -96,9 +99,9 @@ def validate_train(sampled_bit_tensors, bits_reward):
 
     print(f"Number of palindrome strings: {bit_strings_type.get('palindrome')}")
     print(f"Number of balanced strings: {bit_strings_type.get('balanced')}")
-    print(f"Number of palindrome + balanced strings: {bit_strings_type.get('palindrome+balanced')}")
+    # print(f"Number of palindrome + balanced strings: {bit_strings_type.get('palindrome+balanced')}")
     print(f"Number of None strings: {bit_strings_type.get('none')}")
-    print(f"balanced to palindrome ratio: {bit_strings_type.get('palindrome+balanced') / bit_strings_type.get('balanced')}")
+    # print(f"balanced to palindrome ratio: {bit_strings_type.get('palindrome+balanced') / bit_strings_type.get('balanced')}")
 
 # plotting loss and generated bit strings
 def main():
