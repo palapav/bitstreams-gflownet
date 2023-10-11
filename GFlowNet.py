@@ -1,26 +1,20 @@
 import torch
 import torch.nn as nn
-from nn_utils import TARGET_BIT_STRING_LEN
+from reward import TARGET_BIT_STRING_LEN
 
-# train using a flow-matching loss
-# let's hardcode for size 12 bit strings -> ideally we would want variable
-# size -> 1 for the presence of 1, 0 for the lack of presence of 1, 2 if position hasn't been encountered yet
 class GFlowNet(nn.Module):
     def __init__(self, num_hid):
-        # super should be first line
         super().__init__()
         self.mlp = nn.Sequential(nn.Linear(TARGET_BIT_STRING_LEN, num_hid), nn.LeakyReLU(),
-                                 nn.Linear(num_hid, 2))
-    
-    # x represents the parent bit string
-    # will the ouput be probabilistic or definite?
+                                 nn.Linear(num_hid, TARGET_BIT_STRING_LEN + 1))
+
+        self.logZ = nn.Parameter(torch.ones(1))
+
     def forward(self, x):
-        # we need to give 0 flow to actions we can't take -> not necessary b/c
-        # no need to multiply by (1 - x) -> no illegal actions
-        # instead of .exp -> try log
-        F = self.mlp(x).exp()
-        return F
+        if x.size(0) != TARGET_BIT_STRING_LEN: raise AssertionError("Input tensor of incorrect length")
 
+        P_F = self.mlp(x)
 
-
-
+        # masking illegal actions
+        P_F[torch.where(x == 1.0)] = -100
+        return P_F
