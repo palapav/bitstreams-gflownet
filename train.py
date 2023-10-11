@@ -1,113 +1,63 @@
-from GFlowNet import GFlowNet
-from nn_utils import bits_reward, bits_to_tensor, TARGET_BIT_STRING_LEN
 import torch
-from torch.distributions.bernoulli import Bernoulli
 import tqdm
-import sys
+import reward
+from gflownet import GFlowNet
+from torch.distributions.categorical import Categorical
 
-def train():
-    # F[s][a] -> outputs the flow to every child state from the parent state
-    F_sa = GFlowNet(512)
-    opt = torch.optim.Adam(F_sa.parameters(), 3e-4)
+# via trajectory balance (fixing P_B also)
+model = GFlowNet(512)
+opt = torch.optim.Adam(model.parameters(), 3e-3)
 
-    losses = []
-    sampled_bit_strings = []
+tb_losses = []
+sampled_bit_strings = []
+bit_string_freq = {reward.UNBALANCED_REWARD: 0, reward.BALANCED_REWARD: 0, reward.NONE_REWARD: 0}
 
-    minibatch_loss = 0
+minibatch_loss = 0
+update_freq = 32
+print_loss_freq = 1000
+logZs = []
 
-    # make batch size higher
-    update_freq = 4
+for episode in tqdm.tqdm(range(100000), ncols=40):
+    reward = None
+    is_terminal = False
+    state = torch.FloatTensor([0.] * reward.TARGET_BIT_STRING_LEN)
 
-    num_episodes = 50,000
+    # total_P_F includes termination probability
+    total_P_F = 0
+    total_P_B = 0
 
-    for episode in range(50000):
-        # each episode state starts with an empty state
-        state = []
-        # state = bits_to_tensor(state)
-        state = torch.FloatTensor([2.] * TARGET_BIT_STRING_LEN)
+    while not is_terminal:
+        P_F_s = model(state)
+        cat = Categorical(logits=P_F_s)
+        action = cat.sample()
+        total_P_F += cat.log_prob(action)
 
-        # tensor[ , ] = F[s][a]
-        edge_flow_prediction = F_sa(state)
-        # print(f"beginning: {edge_flow_prediction}")
-
-        # 6 flows from parent to children to create 6 bit string
-        for t in range(TARGET_BIT_STRING_LEN):
-            policy = edge_flow_prediction / edge_flow_prediction.sum()
-
-            # print(f"Policy in {t}: {policy[1]}")
-
-            # the first element in policy vector for 0, second one for 1
-            action = Bernoulli(probs=policy[1]).sample()
-            # print(f"action: {action}")
-
-            # need to figure out better indexing method
-            action_index = torch.where(state == 2)[0][0].item()
-            new_state = state.clone()
-            new_state[action_index] = action
-
-            # enumerate over the parents
-            parent_state, parent_action = state.clone(), action
-
-            # in edge flow -> [action 0 flow, action 1 flow]
-            parent_action = int(parent_action)
-            parent_edge_flow_pred = F_sa(parent_state)[parent_action]
-
-            reward = 0
-            edge_flow_prediction = torch.zeros(2)
-            if t == TARGET_BIT_STRING_LEN - 1:
-                # print("I AM GETTING A REWARD:")
-                reward = bits_reward(new_state)
-            else: edge_flow_prediction = F_sa(new_state)
-
-            flow_mismatch = (parent_edge_flow_pred - edge_flow_prediction.sum() - reward) ** 2
-            minibatch_loss += flow_mismatch
-
-            state = new_state
-        
-        # adding terminal bit string objects to sampled_bit_strings
-        sampled_bit_strings.append(state)
-        if episode % 10000 == 0:
-            validate_train(sampled_bit_strings, bits_reward)
-
-        if episode % update_freq == 0:
-            print(f"minibatch loss {episode}:\n{minibatch_loss.item()}")
-            losses.append(minibatch_loss.item())
-            # minibatch loss needs to be in the form of a tensor
-            minibatch_loss.backward()
-            opt.step()
-            opt.zero_grad()
-            minibatch_loss = 0
-    
-    return losses, sampled_bit_strings
-
-
-def validate_train(sampled_bit_tensors, bits_reward):
-    bit_strings_type = {"palindrome+balanced": 0, "palindrome": 0, "balanced": 0, "none": 0}
-
-    for bits_tensor in sampled_bit_tensors:
-        # print(f"bits tensor in eval: {bits_tensor}")
-        reward = bits_reward(bits_tensor)
-        # print(f"reward from sampled bits: {reward}")
-        # if reward == 4:
-        #     bit_strings_type["palindrome+balanced"] = bit_strings_type.get("palindrome+balanced") + 1
-        if reward == 2:
-            bit_strings_type["palindrome"] = bit_strings_type.get("palindrome") + 1
-        elif reward == 1:
-            bit_strings_type["balanced"] = bit_strings_type.get("balanced") + 1
+        # terminal state
+        if action == reward.TARGET_BIT_STRING_LEN:
+            is_terminal = True
+            reward = reward.bits_reward(state)
         else:
-            bit_strings_type["none"] = bit_strings_type.get("none") + 1
+            new_state = state.clone()
+            new_state[action] = 1.0
 
-    print(f"Number of palindrome strings: {bit_strings_type.get('palindrome')}")
-    print(f"Number of balanced strings: {bit_strings_type.get('balanced')}")
-    # print(f"Number of palindrome + balanced strings: {bit_strings_type.get('palindrome+balanced')}")
-    print(f"Number of None strings: {bit_strings_type.get('none')}")
-    # print(f"balanced to palindrome ratio: {bit_strings_type.get('palindrome+balanced') / bit_strings_type.get('balanced')}")
+            # fixing P_B to arrive at one P_F global minimum via uniform distribution
+            fixed_P_B_s = -1 * torch.log(torch.sum(new_state == 1))
+            total_P_B += fixed_P_B_s
+            state = new_state
 
-# plotting loss and generated bit strings
-def main():
-    losses, sampled_bit_strings = train()
-    validate_train(sampled_bit_strings, bits_reward)
+    loss = (model.logZ + total_P_F - torch.log(torch.tensor(reward)) - total_P_B).pow(2)
+    minibatch_loss += loss
 
-# unit testing
-if __name__ == "__main__":
-    main()
+    if episode % update_freq == 0:
+        tb_losses.append(minibatch_loss.item())
+        minibatch_loss /= update_freq
+        minibatch_loss.backward()
+        opt.step()
+        opt.zero_grad()
+        minibatch_loss = 0
+        logZs.append(model.logZ.item())
+
+    if episode % print_loss_freq == 0:
+          print(f"\nminibatch loss {episode}:\n{tb_losses[-1]}")
+          # take an average later
+          if tb_losses[-1] < 1e-3: break
