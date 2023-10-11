@@ -2,9 +2,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
-test.py
-train_comments.py
-progress.txt
 
 # C extensions
 *.so
